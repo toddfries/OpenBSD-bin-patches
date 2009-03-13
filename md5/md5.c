@@ -1,4 +1,4 @@
-/*	$OpenBSD: md5.c,v 1.48 2007/11/07 09:52:25 chl Exp $	*/
+/*	$OpenBSD: md5.c,v 1.50 2008/09/06 12:01:34 djm Exp $	*/
 
 /*
  * Copyright (c) 2001,2003,2005-2006 Todd C. Miller <Todd.Miller@courtesan.com>
@@ -46,15 +46,21 @@
 
 #define MAX_DIGEST_LEN	128
 
+enum program_mode {
+	MODE_MD5,
+	MODE_SHA1,
+	MODE_RMD160,
+	MODE_CKSUM,
+	MODE_SUM
+} pmode;
+
 union ANY_CTX {
 	CKSUM_CTX cksum;
 	MD4_CTX md4;
 	MD5_CTX md5;
 	RMD160_CTX rmd160;
 	SHA1_CTX sha1;
-	SHA256_CTX sha256;
-	SHA384_CTX sha384;
-	SHA512_CTX sha512;
+	SHA2_CTX sha2;
 	SUM_CTX sum;
 	SYSVSUM_CTX sysvsum;
 };
@@ -152,30 +158,30 @@ struct hash_function {
 		&style_hash,
 		0,
 		NULL,
-		(void (*)(void *))SHA256_Init,
-		(void (*)(void *, const unsigned char *, unsigned int))SHA256_Update,
-		(void (*)(unsigned char *, void *))SHA256_Final,
-		(char *(*)(void *, char *))SHA256_End
+		(void (*)(void *))SHA256Init,
+		(void (*)(void *, const unsigned char *, unsigned int))SHA256Update,
+		(void (*)(unsigned char *, void *))SHA256Final,
+		(char *(*)(void *, char *))SHA256End
 	}, {
 		"SHA384",
 		SHA384_DIGEST_LENGTH,
 		&style_hash,
 		0,
 		NULL,
-		(void (*)(void *))SHA384_Init,
-		(void (*)(void *, const unsigned char *, unsigned int))SHA384_Update,
-		(void (*)(unsigned char *, void *))SHA384_Final,
-		(char *(*)(void *, char *))SHA384_End
+		(void (*)(void *))SHA384Init,
+		(void (*)(void *, const unsigned char *, unsigned int))SHA384Update,
+		(void (*)(unsigned char *, void *))SHA384Final,
+		(char *(*)(void *, char *))SHA384End
 	}, {
 		"SHA512",
 		SHA512_DIGEST_LENGTH,
 		&style_hash,
 		0,
 		NULL,
-		(void (*)(void *))SHA512_Init,
-		(void (*)(void *, const unsigned char *, unsigned int))SHA512_Update,
-		(void (*)(unsigned char *, void *))SHA512_Final,
-		(char *(*)(void *, char *))SHA512_End
+		(void (*)(void *))SHA512Init,
+		(void (*)(void *, const unsigned char *, unsigned int))SHA512Update,
+		(void (*)(unsigned char *, void *))SHA512Final,
+		(char *(*)(void *, char *))SHA512End
 	}, {
 		NULL,
 	}
@@ -197,8 +203,6 @@ void usage(void) __attribute__((__noreturn__));
 extern char *__progname;
 int qflag = 0;
 
-#define	OPTSTRING	"a:bco:pqrs:tx"
-
 int
 main(int argc, char **argv)
 {
@@ -209,18 +213,43 @@ main(int argc, char **argv)
 	int fl, error, base64;
 	int bflag, cflag, pflag, rflag, tflag, xflag;
 
+	static const char *optstr[5] = {
+		"bcpqrs:tx",
+		"bcpqrs:tx",
+		"bcpqrs:tx",
+		"a:bco:pqrs:tx",
+		"a:bco:pqrs:tx"
+	};
+
 	TAILQ_INIT(&hl);
 	input_string = NULL;
 	error = bflag = cflag = pflag = qflag = rflag = tflag = xflag = 0;
 
+	pmode = MODE_MD5;
+	if (strcmp(__progname, "md5") == 0)
+		pmode = MODE_MD5;
+	else if (strcmp(__progname, "sha1") == 0)
+		pmode = MODE_SHA1;
+	else if (strcmp(__progname, "rmd160") == 0)
+		pmode = MODE_RMD160;
+	else if (strcmp(__progname, "cksum") == 0)
+		pmode = MODE_CKSUM;
+	else if (strcmp(__progname, "sum") == 0)
+		pmode = MODE_SUM;
+
 	/* Check for -b option early since it changes behavior. */
-	while ((fl = getopt(argc, argv, ":" OPTSTRING)) != -1) {
-		if (fl == 'b')
+	while ((fl = getopt(argc, argv, optstr[pmode])) != -1) {
+		switch (fl) {
+		case 'b':
 			bflag = 1;
+			break;
+		case '?':
+			usage();
+		}
 	}
 	optind = 1;
 	optreset = 1;
-	while ((fl = getopt(argc, argv, OPTSTRING)) != -1) {
+	while ((fl = getopt(argc, argv, optstr[pmode])) != -1) {
 		switch (fl) {
 		case 'a':
 			while ((cp = strsep(&optarg, " \t,")) != NULL) {
@@ -249,7 +278,8 @@ main(int argc, char **argv)
 				}
 				if (hf->base64 == -1 && base64 != -1) {
 					warnx("%s doesn't support %s",
-					    hf->name, base64 ? "base64" : "hex");
+					    hf->name,
+					    base64 ? "base64" : "hex");
 					usage();
 				}
 				/* Check for dupes. */
@@ -649,7 +679,8 @@ digest_filelist(const char *file, struct hash_function *defhash)
 			cmp = strcasecmp(checksum, digest);
 		if (cmp == 0) {
 			if (qflag == 0)
-				(void)printf("(%s) %s: OK\n", algorithm, filename);
+				(void)printf("(%s) %s: OK\n", algorithm,
+				    filename);
 		} else {
 			(void)printf("(%s) %s: FAILED\n", algorithm, filename);
 			error = 1;
@@ -754,10 +785,21 @@ digest_test(struct hash_list *hl)
 void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-bpqrtx] [-c [checklist ...]] "
-	    "[-s string] [file ...]\n", __progname);
-	if (strcmp(__progname, "cksum") == 0)
-		fprintf(stderr, "             [-a algorithms]] [-o 1 | 2]\n");
+	switch (pmode) {
+	case MODE_MD5:
+	case MODE_SHA1:
+	case MODE_RMD160:
+		fprintf(stderr, "usage: %s [-bpqrtx] [-c [checklist ...]] "
+		    "[-s string] [file ...]\n", __progname);
+		break;
+	case MODE_CKSUM:
+	case MODE_SUM:
+		fprintf(stderr, "usage: %s [-bpqrtx] [-a algorithms] "
+		    "[-c [checklist ...]] [-o 1 | 2]\n"
+		    "       %*s [-s string] [file ...]\n",
+		    __progname, (int)strlen(__progname), "");
+		break;
+	}
 
 	exit(EXIT_FAILURE);
 }

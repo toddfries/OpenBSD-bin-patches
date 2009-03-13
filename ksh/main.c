@@ -1,4 +1,4 @@
-/*	$OpenBSD: main.c,v 1.43 2007/05/31 20:47:44 otto Exp $	*/
+/*	$OpenBSD: main.c,v 1.45 2009/01/29 23:27:26 jaredy Exp $	*/
 
 /*
  * startup, main loop, environments and error handling
@@ -246,10 +246,11 @@ main(int argc, char *argv[])
 		struct tbl *vp = global("PS1");
 
 		/* Set PS1 if it isn't set, or we are root and prompt doesn't
-		 * contain a #.
+		 * contain a # or \$ (only in ksh mode).
 		 */
 		if (!(vp->flag & ISSET) ||
-		    (!ksheuid && !strchr(str_val(vp), '#')))
+		    (!ksheuid && !strchr(str_val(vp), '#') &&
+		    (Flag(FSH) || !strstr(str_val(vp), "\\$"))))
 			/* setstr can't fail here */
 			setstr(vp, safe_prompt, KSH_RETURN_ERROR);
 	}
@@ -565,7 +566,7 @@ shell(Source *volatile s, volatile int toplevel)
 		}
 
 		if (t && (!Flag(FNOEXEC) || (s->flags & SF_TTY)))
-			exstat = execute(t, 0);
+			exstat = execute(t, 0, NULL);
 
 		if (t != NULL && t->type != TEOF && interactive && really_exit)
 			really_exit = 0;

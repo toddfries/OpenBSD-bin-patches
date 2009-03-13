@@ -1,4 +1,4 @@
-/*	$OpenBSD: proto.h,v 1.30 2006/03/17 16:30:13 millert Exp $	*/
+/*	$OpenBSD: proto.h,v 1.32 2009/01/29 23:27:26 jaredy Exp $	*/
 
 /*
  * prototypes for PD-KSH
@@ -44,7 +44,7 @@ int	c_set(char **);
 int	c_unset(char **);
 int	c_ulimit(char **);
 int	c_times(char **);
-int	timex(struct op *, int);
+int	timex(struct op *, int, volatile int *);
 void	timex_hook(struct op *, char ** volatile *);
 int	c_exec(char **);
 int	c_builtin(char **);
@@ -65,7 +65,7 @@ char	*debunk(char *, const char *, size_t);
 void	expand(char *, XPtrV *, int);
 int	glob_str(char *, XPtrV *, int);
 /* exec.c */
-int	execute(struct op * volatile, volatile int);
+int	execute(struct op * volatile, volatile int, volatile int *);
 int	shcomexec(char **);
 struct tbl * findfunc(const char *, unsigned int, int);
 int	define(const char *, struct op *);
@@ -134,7 +134,7 @@ struct temp *maketemp(Area *, Temp_type, struct temp **);
 void	j_init(int);
 void	j_exit(void);
 void	j_change(void);
-int	exchild(struct op *, int, int);
+int	exchild(struct op *, int, volatile int *, int);
 void	startlast(void);
 int	waitlast(void);
 int	waitfor(const char *, int *);
@@ -182,8 +182,8 @@ int	gmatch(const char *, const char *, int);
 int	has_globbing(const char *, const char *);
 const unsigned char *pat_scan(const unsigned char *, const unsigned char *,
     int);
-void	qsortp(void **, size_t, int (*)(void *, void *));
-int	xstrcmp(void *, void *);
+void	qsortp(void **, size_t, int (*)(const void *, const void *));
+int	xstrcmp(const void *, const void *);
 void	ksh_getopt_reset(Getopt *, int);
 int	ksh_getopt(char **, Getopt *, const char *);
 void	print_value_quoted(const char *);

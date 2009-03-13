@@ -1,8 +1,8 @@
-.\"	$OpenBSD: ksh.1,v 1.122 2008/05/17 23:31:52 sobrado Exp $
+.\"	$OpenBSD: ksh.1,v 1.125 2009/02/07 23:15:28 jmc Exp $
 .\"
 .\"	Public Domain
 .\"
-.Dd $Mdocdate: May 17 2008 $
+.Dd $Mdocdate: February 7 2009 $
 .Dt KSH 1
 .Os
 .Sh NAME
@@ -2500,6 +2500,16 @@ In the future, a new option
 .Pq Fl v No perhaps
 will be added to distinguish the two behaviours.
 .It
+.Ic echo
+options.
+In POSIX mode,
+.Fl e
+and
+.Fl E
+are not treated as options, but printed like other arguments;
+in non-POSIX mode, these options control the interpretation
+of backslash sequences.
+.It
 .Ic fg
 exit status.
 In POSIX mode, the exit status is 0 if no errors occur;
@@ -3030,6 +3040,11 @@ option suppresses the trailing newline,
 enables backslash interpretation (a no-op, since this is normally done), and
 .Fl E
 suppresses backslash interpretation.
+If the
+.Ic posix
+option is set, only the first argument is treated as an option, and only
+if it is exactly
+.Dq -n .
 .Pp
 .It Ic eval Ar command ...
 The arguments are concatenated (with spaces between them) to form a single
@@ -3567,8 +3582,9 @@ explicitly tested by a shell construct such as
 .Ic until ,
 .Ic while ,
 .Ic && ,
+.Ic || ,
 or
-.Ic ||
+.Ic !\&
 statements.
 .It Fl f \*(Ba Ic noglob
 Do not expand file name patterns.

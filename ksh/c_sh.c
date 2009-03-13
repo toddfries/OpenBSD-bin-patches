@@ -1,4 +1,4 @@
-/*	$OpenBSD: c_sh.c,v 1.37 2007/09/03 13:54:23 otto Exp $	*/
+/*	$OpenBSD: c_sh.c,v 1.39 2009/01/29 23:27:26 jaredy Exp $	*/
 
 /*
  * built-in Bourne commands
@@ -709,7 +709,7 @@ c_times(char **wp)
  * time pipeline (really a statement, not a built-in command)
  */
 int
-timex(struct op *t, int f)
+timex(struct op *t, int f, volatile int *xerrok)
 {
 #define TF_NOARGS	BIT(0)
 #define TF_NOREAL	BIT(1)		/* don't report real time */
@@ -719,7 +719,6 @@ timex(struct op *t, int f)
 	struct timeval usrtime, systime, tv0, tv1;
 	int tf = 0;
 	extern struct timeval j_usrtime, j_systime; /* computed by j_wait */
-	char opts[1];
 
 	gettimeofday(&tv0, NULL);
 	getrusage(RUSAGE_SELF, &ru0);
@@ -735,11 +734,9 @@ timex(struct op *t, int f)
 		 */
 		timerclear(&j_usrtime);
 		timerclear(&j_systime);
+		rv = execute(t->left, f | XTIME, xerrok);
 		if (t->left->type == TCOM)
-			t->left->str = opts;
-		opts[0] = 0;
-		rv = execute(t->left, f | XTIME);
-		tf |= opts[0];
+			tf |= t->left->str[0];
 		gettimeofday(&tv1, NULL);
 		getrusage(RUSAGE_SELF, &ru1);
 		getrusage(RUSAGE_CHILDREN, &cru1);
