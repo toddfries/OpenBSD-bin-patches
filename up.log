@@ -15,4 +15,4 @@ Host key fingerprint is 3f:44:14:35:1b:65:cc:cb:da:17:6d:1d:e1:b4:a6:36
 ? .gitignore
 ? status.log
 ? up.log
-P csh/csh.1
+P pax/pax.1
