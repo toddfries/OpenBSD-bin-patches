@@ -1,17 +1,11 @@
 # On branch master
-# Changes to be committed:
-#   (use "git reset HEAD <file>..." to unstage)
-#
-#	deleted:    ls/ls.c.orig
-#
 # Changed but not updated:
 #   (use "git add <file>..." to update what will be committed)
 #   (use "git checkout -- <file>..." to discard changes in working directory)
 #
 #	modified:   chmod/chflags.1
 #	modified:   ls/ls.1
-#	modified:   md5/cksum.1
-#	modified:   pax/pax.1
 #	modified:   status.log
 #	modified:   up.log
 #
+no changes added to commit (use "git add" and/or "git commit -a")

@@ -4,5 +4,3 @@
 ? up.log
 P chmod/chflags.1
 P ls/ls.1
-P md5/cksum.1
-P pax/pax.1
