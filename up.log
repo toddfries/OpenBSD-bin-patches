@@ -2,5 +2,3 @@
 ? .gitignore
 ? status.log
 ? up.log
-P chmod/chflags.1
-P ls/ls.1

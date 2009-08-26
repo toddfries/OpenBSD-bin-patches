@@ -1,3 +1,5 @@
 CVS
 obj
 .cvsignore
+*.orig
+*.log
