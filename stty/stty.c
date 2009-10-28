@@ -1,4 +1,4 @@
-/*	$OpenBSD: stty.c,v 1.12 2008/05/17 23:31:52 sobrado Exp $	*/
+/*	$OpenBSD: stty.c,v 1.14 2009/10/28 20:58:38 deraadt Exp $	*/
 /*	$NetBSD: stty.c,v 1.11 1995/03/21 09:11:30 cgd Exp $	*/
 
 /*-
@@ -30,20 +30,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char copyright[] =
-"@(#) Copyright (c) 1989, 1991, 1993, 1994\n\
-	The Regents of the University of California.  All rights reserved.\n";
-#endif /* not lint */
-
-#ifndef lint
-#if 0
-static char sccsid[] = "@(#)stty.c	8.3 (Berkeley) 4/2/94";
-#else
-static char rcsid[] = "$OpenBSD: stty.c,v 1.12 2008/05/17 23:31:52 sobrado Exp $";
-#endif
-#endif /* not lint */
-
 #include <sys/types.h>
 
 #include <ctype.h>
@@ -52,6 +38,7 @@ static char rcsid[] = "$OpenBSD: stty.c,v 1.12 2008/05/17 23:31:52 sobrado Exp $
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -125,9 +112,12 @@ args:	argc -= optind;
 			continue;
 
 		if (isdigit(**argv)) {
+			const char *error;
 			int speed;
 
-			speed = atoi(*argv);
+			speed = strtonum(*argv, 0, INT_MAX, &error);
+			if (error)
+				err(1, "%s", *argv);
 			cfsetospeed(&i.t, speed);
 			cfsetispeed(&i.t, speed);
 			i.set = 1;

@@ -1,4 +1,4 @@
-/*	$OpenBSD: key.c,v 1.12 2003/06/11 23:42:12 deraadt Exp $	*/
+/*	$OpenBSD: key.c,v 1.14 2009/10/28 20:58:38 deraadt Exp $	*/
 /*	$NetBSD: key.c,v 1.11 1995/09/07 06:57:11 jtc Exp $	*/
 
 /*-
@@ -30,19 +30,12 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-#if 0
-static char sccsid[] = "@(#)key.c	8.4 (Berkeley) 2/20/95";
-#else
-static char rcsid[] = "$OpenBSD: key.c,v 1.12 2003/06/11 23:42:12 deraadt Exp $";
-#endif
-#endif /* not lint */
-
 #include <sys/types.h>
 
 #include <err.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -163,8 +156,11 @@ f_cbreak(struct info *ip)
 void
 f_columns(struct info *ip)
 {
+	const char *error;
 
-	ip->win.ws_col = atoi(ip->arg);
+	ip->win.ws_col = strtonum(ip->arg, 0, USHRT_MAX, &error);
+	if (error)
+		err(1, "cols %s", ip->arg);
 	ip->wset = 1;
 }
 
@@ -273,8 +269,11 @@ f_raw(struct info *ip)
 void
 f_rows(struct info *ip)
 {
+	const char *error;
 
-	ip->win.ws_row = atoi(ip->arg);
+	ip->win.ws_row = strtonum(ip->arg, 0, USHRT_MAX, &error);
+	if (error)
+		err(1, "rows %s", ip->arg);
 	ip->wset = 1;
 }
 

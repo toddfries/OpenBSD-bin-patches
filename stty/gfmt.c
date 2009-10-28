@@ -1,4 +1,4 @@
-/*	$OpenBSD: gfmt.c,v 1.6 2003/06/11 23:42:12 deraadt Exp $	*/
+/*	$OpenBSD: gfmt.c,v 1.8 2009/10/28 07:12:59 guenther Exp $	*/
 /*	$NetBSD: gfmt.c,v 1.10 1996/05/07 18:20:08 jtc Exp $	*/
 
 /*-
@@ -29,14 +29,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
-#ifndef lint
-#if 0
-static char sccsid[] = "@(#)gfmt.c	8.6 (Berkeley) 4/2/94";
-#else
-static char rcsid[] = "$OpenBSD: gfmt.c,v 1.6 2003/06/11 23:42:12 deraadt Exp $";
-#endif
-#endif /* not lint */
 
 #include <sys/types.h>
 
@@ -115,8 +107,6 @@ gread(struct termios *tp, char *s)
 		}
 		for (cp = cchars1; cp->name != NULL; ++cp)
 			if (CHK(cp->name)) {
-				if (cp->sub == VMIN || cp->sub == VTIME)
-					(void)sscanf(ep, "%ld", &tmp);
 				tp->c_cc[cp->sub] = tmp;
 				break;
 			}

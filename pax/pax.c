@@ -1,4 +1,4 @@
-/*	$OpenBSD: pax.c,v 1.28 2005/08/04 10:02:44 mpf Exp $	*/
+/*	$OpenBSD: pax.c,v 1.30 2009/10/28 20:30:41 guenther Exp $	*/
 /*	$NetBSD: pax.c,v 1.5 1996/03/26 23:54:20 mrg Exp $	*/
 
 /*-
@@ -33,20 +33,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
-#ifndef lint
-static const char copyright[] =
-"@(#) Copyright (c) 1992, 1993\n\
-	The Regents of the University of California.  All rights reserved.\n";
-#endif /* not lint */
-
-#ifndef lint
-#if 0
-static const char sccsid[] = "@(#)pax.c	8.2 (Berkeley) 4/18/94";
-#else
-static const char rcsid[] = "$OpenBSD: pax.c,v 1.28 2005/08/04 10:02:44 mpf Exp $";
-#endif
-#endif /* not lint */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -399,27 +385,27 @@ gen_init(void)
 	n_hand.sa_flags = 0;
 	n_hand.sa_handler = sig_cleanup;
 
-	if ((sigaction(SIGHUP, &n_hand, &o_hand) < 0) &&
+	if ((sigaction(SIGHUP, &n_hand, &o_hand) < 0) ||
 	    (o_hand.sa_handler == SIG_IGN) &&
 	    (sigaction(SIGHUP, &o_hand, &o_hand) < 0))
 		goto out;
 
-	if ((sigaction(SIGTERM, &n_hand, &o_hand) < 0) &&
+	if ((sigaction(SIGTERM, &n_hand, &o_hand) < 0) ||
 	    (o_hand.sa_handler == SIG_IGN) &&
 	    (sigaction(SIGTERM, &o_hand, &o_hand) < 0))
 		goto out;
 
-	if ((sigaction(SIGINT, &n_hand, &o_hand) < 0) &&
+	if ((sigaction(SIGINT, &n_hand, &o_hand) < 0) ||
 	    (o_hand.sa_handler == SIG_IGN) &&
 	    (sigaction(SIGINT, &o_hand, &o_hand) < 0))
 		goto out;
 
-	if ((sigaction(SIGQUIT, &n_hand, &o_hand) < 0) &&
+	if ((sigaction(SIGQUIT, &n_hand, &o_hand) < 0) ||
 	    (o_hand.sa_handler == SIG_IGN) &&
 	    (sigaction(SIGQUIT, &o_hand, &o_hand) < 0))
 		goto out;
 
-	if ((sigaction(SIGXCPU, &n_hand, &o_hand) < 0) &&
+	if ((sigaction(SIGXCPU, &n_hand, &o_hand) < 0) ||
 	    (o_hand.sa_handler == SIG_IGN) &&
 	    (sigaction(SIGXCPU, &o_hand, &o_hand) < 0))
 		goto out;
