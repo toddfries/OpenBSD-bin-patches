@@ -3,5 +3,3 @@
 ? status.log
 ? up.log
 P pax/options.c
-P pax/sel_subs.c
-P systrace/parse.y

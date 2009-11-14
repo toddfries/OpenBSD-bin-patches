@@ -4,9 +4,7 @@
 #   (use "git checkout -- <file>..." to discard changes in working directory)
 #
 #	modified:   pax/options.c
-#	modified:   pax/sel_subs.c
 #	modified:   status.log
-#	modified:   systrace/parse.y
 #	modified:   up.log
 #
 no changes added to commit (use "git add" and/or "git commit -a")
