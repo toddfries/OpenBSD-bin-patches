@@ -4,3 +4,4 @@
 .cvsignore
 CVS
 obj
+.#*
