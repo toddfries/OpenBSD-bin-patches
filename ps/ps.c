@@ -1,4 +1,4 @@
-/*	$OpenBSD: ps.c,v 1.49 2011/04/10 03:20:58 guenther Exp $	*/
+/*	$OpenBSD: ps.c,v 1.51 2011/10/13 01:15:04 guenther Exp $	*/
 /*	$NetBSD: ps.c,v 1.15 1995/05/18 20:33:25 mycroft Exp $	*/
 
 /*-
@@ -37,8 +37,6 @@
 #include <sys/proc.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <sys/sysctl.h>
-#include <sys/types.h>
 
 #include <ctype.h>
 #include <err.h>
@@ -65,8 +63,6 @@ int	rawcpu;			/* -C */
 int	sumrusage;		/* -S */
 int	termwidth;		/* width of screen (0 == infinity) */
 int	totwidth;		/* calculated width of requested variables */
-
-int	ncpu = 1;
 
 int	needcomm, needenv, neednlist, commandonly;
 
@@ -98,10 +94,9 @@ main(int argc, char *argv[])
 	dev_t ttydev;
 	pid_t pid;
 	uid_t uid;
-	int all, ch, flag, i, fmt, lineno, nentries, mib[6];
-	int prtheader, wflag, kflag, what, Uflag, xflg;
+	int all, ch, flag, i, fmt, lineno, nentries;
+	int prtheader, showthreads, wflag, kflag, what, Uflag, xflg;
 	char *nlistf, *memf, *swapf, errbuf[_POSIX2_LINE_MAX];
-	size_t size;
 
 	if ((ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 &&
 	    ioctl(STDERR_FILENO, TIOCGWINSZ, &ws) == -1 &&
@@ -114,13 +109,13 @@ main(int argc, char *argv[])
 	if (argc > 1)
 		argv[1] = kludge_oldps_options(argv[1]);
 
-	all = fmt = prtheader = wflag = kflag = Uflag = xflg = 0;
+	all = fmt = prtheader = showthreads = wflag = kflag = Uflag = xflg = 0;
 	pid = -1;
 	uid = 0;
 	ttydev = NODEV;
 	memf = nlistf = swapf = NULL;
 	while ((ch = getopt(argc, argv,
-	    "acCeghjkLlM:mN:O:o:p:rSTt:U:uvW:wx")) != -1)
+	    "acCegHhjkLlM:mN:O:o:p:rSTt:U:uvW:wx")) != -1)
 		switch (ch) {
 		case 'a':
 			all = 1;
@@ -136,6 +131,9 @@ main(int argc, char *argv[])
 			break;
 		case 'g':
 			break;			/* no-op */
+		case 'H':
+			showthreads = 1;
+			break;
 		case 'h':
 			prtheader = ws.ws_row > 5 ? ws.ws_row : 22;
 			break;
@@ -305,11 +303,6 @@ main(int argc, char *argv[])
 		flag = 0;
 	}
 
-	mib[0] = CTL_HW;
-	mib[1] = HW_NCPU;
-	size = sizeof(ncpu);
-	(void) sysctl(mib, 2, &ncpu, &size, NULL, 0);
-
 	/*
 	 * select procs
 	 */
@@ -336,6 +329,8 @@ main(int argc, char *argv[])
 	 * for each proc, call each variable output function.
 	 */
 	for (i = lineno = 0; i < nentries; i++) {
+		if (showthreads == 0 && (kinfo[i]->p_flag & P_THREAD) != 0)
+			continue;
 		if (xflg == 0 && ((int)kinfo[i]->p_tdev == NODEV ||
 		    (kinfo[i]->p_flag & P_CONTROLT ) == 0))
 			continue;
@@ -458,7 +453,7 @@ static void
 usage(void)
 {
 	(void)fprintf(stderr,
-	    "usage: %s [-aCcehjkLlmrSTuvwx] [-M core] [-N system] [-O fmt] [-o fmt] [-p pid]\n",
+	    "usage: %s [-aCceHhjkLlmrSTuvwx] [-M core] [-N system] [-O fmt] [-o fmt] [-p pid]\n",
 	    __progname);	
 	(void)fprintf(stderr,
 	    "%-*s[-t tty] [-U username] [-W swap]\n", (int)strlen(__progname) + 8, "");
