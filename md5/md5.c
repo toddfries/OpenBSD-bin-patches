@@ -1,4 +1,4 @@
-/*	$OpenBSD: md5.c,v 1.54 2012/12/04 02:38:51 deraadt Exp $	*/
+/*	$OpenBSD: md5.c,v 1.56 2013/04/15 15:54:17 millert Exp $	*/
 
 /*
  * Copyright (c) 2001,2003,2005-2006 Todd C. Miller <Todd.Miller@courtesan.com>
@@ -73,7 +73,7 @@ union ANY_CTX {
 int style_hash = STYLE_NORMAL;
 int style_cksum = STYLE_REVERSE;
 
-#define NHASHES	10
+#define NHASHES	11
 struct hash_function {
 	const char *name;
 	size_t digestlen;
@@ -157,6 +157,16 @@ struct hash_function {
 		(void (*)(unsigned char *, void *))SHA1Final,
 		(char *(*)(void *, char *))SHA1End
 	}, {
+		"SHA224",
+		SHA224_DIGEST_LENGTH,
+		&style_hash,
+		0,
+		NULL,
+		(void (*)(void *))SHA224Init,
+		(void (*)(void *, const unsigned char *, unsigned int))SHA224Update,
+		(void (*)(unsigned char *, void *))SHA224Final,
+		(char *(*)(void *, char *))SHA224End
+	}, {
 		"SHA256",
 		SHA256_DIGEST_LENGTH,
 		&style_hash,
@@ -194,7 +204,7 @@ struct hash_function {
 TAILQ_HEAD(hash_list, hash_function);
 
 void digest_end(const struct hash_function *, void *, char *, size_t, int);
-void digest_file(const char *, struct hash_list *, int);
+int  digest_file(const char *, struct hash_list *, int);
 int  digest_filelist(const char *, struct hash_function *);
 void digest_print(const struct hash_function *, const char *, const char *);
 void digest_printstr(const struct hash_function *, const char *, const char *);
@@ -386,10 +396,10 @@ main(int argc, char **argv)
 				error += digest_filelist(*argv++,
 				    TAILQ_FIRST(&hl));
 	} else if (pflag || argc == 0)
-		digest_file("-", &hl, pflag);
+		error = digest_file("-", &hl, pflag);
 	else
 		while (argc--)
-			digest_file(*argv++, &hl, 0);
+			error += digest_file(*argv++, &hl, 0);
 
 	return(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }
@@ -476,7 +486,7 @@ digest_printstr(const struct hash_function *hf, const char *what,
 	}
 }
 
-void
+int
 digest_file(const char *file, struct hash_list *hl, int echo)
 {
 	struct hash_function *hf;
@@ -489,7 +499,7 @@ digest_file(const char *file, struct hash_list *hl, int echo)
 		fp = stdin;
 	else if ((fp = fopen(file, "r")) == NULL) {
 		warn("cannot open %s", file);
-		return;
+		return(1);
 	}
 
 	if (echo)
@@ -510,7 +520,7 @@ digest_file(const char *file, struct hash_list *hl, int echo)
 		warn("%s: read error", file);
 		if (fp != stdin)
 			fclose(fp);
-		return;
+		return(1);
 	}
 	if (fp != stdin)
 		fclose(fp);
@@ -523,6 +533,7 @@ digest_file(const char *file, struct hash_list *hl, int echo)
 		else
 			digest_print(hf, file, digest);
 	}
+	return(0);
 }
 
 /*
