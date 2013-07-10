@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-#	$OpenBSD: th,v 1.13 2006/05/18 21:27:23 miod Exp $
+#	$OpenBSD: th,v 1.16 2013/06/14 20:52:08 millert Exp $
 
 
 #
@@ -132,6 +132,7 @@
 
 use POSIX qw(EINTR);
 use Getopt::Std;
+use File::Temp qw/ :mktemp  /;
 
 $os = defined $^O ? $^O : 'unknown';
 
@@ -145,6 +146,7 @@ Usage: $prog [-s test-set] [-C category] [-p prog] [-v] [-e e=v] test-name ...
 	-s s	Read tests from file s; if s is a directory, it is recursively
 		scaned for test files (which end in .t).
 	-t t	Use t as default time limit for tests (default is unlimited)
+	-T dir	Use dir instead of /tmp to hold temporary files
 	-P	program (-p) string has multiple words, and the program is in
 		the path (kludge option)
 	-v	Verbose mode: print reason test failed.
@@ -190,12 +192,6 @@ EOF
 	"os:$os", '1'
 	);
 
-$temps = "/tmp/rts$$";
-$tempi = "/tmp/rti$$";
-$tempo = "/tmp/rto$$";
-$tempe = "/tmp/rte$$";
-$tempdir = "/tmp/rtd$$";
-
 $nfailed = 0;
 $nxfailed = 0;
 $npassed = 0;
@@ -203,7 +199,7 @@ $nxpassed = 0;
 
 %known_tests = ();
 
-if (!getopts('C:p:Ps:t:ve:')) {
+if (!getopts('C:p:Ps:t:T:ve:')) {
     print STDERR $Usage;
     exit 1;
 }
@@ -213,6 +209,7 @@ die "$prog: no test set specified (use -s)\n" if !defined $opt_s;
 $test_prog = $opt_p;
 $verbose = defined $opt_v && $opt_v;
 $test_set = $opt_s;
+$temp_dir = $opt_T || "/tmp";
 if (defined $opt_t) {
     die "$prog: bad -t argument (should be number > 0): $opt_t\n"
 	if $opt_t !~ /^\d+$/ || $opt_t <= 0;
@@ -256,8 +253,6 @@ foreach $k (keys(%ENV)) {
 }
 $ENV{$k} = $v while ($k,$v) = each %new_env;
 
-die "$prog: couldn't make directory $tempdir - $!\n" if !mkdir($tempdir, 0777);
-
 chop($pwd = `pwd 2> /dev/null`);
 die "$prog: couldn't get current working directory\n" if $pwd eq '';
 die "$prog: couldn't cd to $pwd - $!\n" if !chdir($pwd);
@@ -274,6 +269,17 @@ $child_kill_ok = 0;
 $SIG{'ALRM'} = 'catch_sigalrm';
 
 $| = 1;
+
+# Create temp files
+($fh, $temps) = mkstemp("${temp_dir}/rts.XXXXXXXX");
+close($fh);
+($fh, $tempi) = mkstemp("${temp_dir}/rti.XXXXXXXX");
+close($fh);
+($fh, $tempo) = mkstemp("${temp_dir}/rto.XXXXXXXX");
+close($fh);
+($fh, $tempe) = mkstemp("${temp_dir}/rte.XXXXXXXX");
+close($fh);
+$tempdir = mkdtemp("${temp_dir}/rtd.XXXXXXXX");
 
 if (-d $test_set) {
     $file_prefix_skip = length($test_set) + 1;
@@ -295,7 +301,7 @@ if ($tot_failed || $tot_passed) {
     print "\n";
 }
 
-&cleanup_exit('ok');
+&cleanup_exit($nxfailed ? '' : 'ok');
 
 sub
 cleanup_exit
@@ -388,6 +394,8 @@ run_test
 
     #print "Running test $name...\n" if $verbose;
 
+    return undef if !&scrub_dir($tempdir);
+
     if (defined $test{'stdin'}) {
 	return undef if !&write_file($tempi, $test{'stdin'});
 	$ifile = $tempi;
@@ -398,8 +406,6 @@ run_test
     if (defined $test{'script'}) {
 	return undef if !&write_file($temps, $test{'script'});
     }
-
-    return undef if !&scrub_dir($tempdir);
 
     if (!chdir($tempdir)) {
 	print STDERR "$prog: couldn't cd to $tempdir - $!\n";

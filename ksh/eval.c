@@ -1,4 +1,4 @@
-/*	$OpenBSD: eval.c,v 1.37 2011/10/11 14:32:43 otto Exp $	*/
+/*	$OpenBSD: eval.c,v 1.39 2013/07/01 17:25:27 jca Exp $	*/
 
 /*
  * Expansion - quoting, separation, substitution, globbing
@@ -505,7 +505,9 @@ expand(char *cp,	/* input word */
 			break;
 
 		case XCOM:
-			if (newlines) {		/* Spit out saved nl's */
+			if (x.u.shf == NULL)	/* $(< ...) failed, fake EOF */
+				c = EOF;
+			else if (newlines) {		/* Spit out saved nl's */
 				c = '\n';
 				--newlines;
 			} else {
@@ -520,9 +522,12 @@ expand(char *cp,	/* input word */
 			}
 			if (c == EOF) {
 				newlines = 0;
-				shf_close(x.u.shf);
+				if (x.u.shf != NULL)
+					shf_close(x.u.shf);
 				if (x.split)
 					subst_exstat = waitlast();
+				else
+					subst_exstat = (x.u.shf == NULL);
 				type = XBASE;
 				if (f&DOBLANK)
 					doblank--;
@@ -860,10 +865,11 @@ comsub(Expand *xp, char *cp)
 		shf = shf_open(name = evalstr(io->name, DOTILDE), O_RDONLY, 0,
 			SHF_MAPHI|SHF_CLEXEC);
 		if (shf == NULL)
-			errorf("%s: cannot open $() input", name);
+			warningf(!Flag(FTALKING),
+			    "%s: cannot open $(<) input", name);
 		xp->split = 0;	/* no waitlast() */
 	} else {
-		int ofd1, pv[2];
+		int errexit, ofd1, pv[2];
 		openpipe(pv);
 		shf = shf_fdopen(pv[0], SHF_RD, (struct shf *) 0);
 		ofd1 = savefd(1);
@@ -871,7 +877,15 @@ comsub(Expand *xp, char *cp)
 			ksh_dup2(pv[1], 1, false);
 			close(pv[1]);
 		}
+		/*
+		 * Clear FERREXIT temporarily while we execute the command.
+		 * We cannot simply pass XERROK since the tree might include
+		 * its own "set -e".
+		 */
+		errexit = Flag(FERREXIT);
+		Flag(FERREXIT) = 0;
 		execute(t, XFORK|XXCOM|XPIPEO, NULL);
+		Flag(FERREXIT) = errexit;
 		restfd(1, ofd1);
 		startlast();
 		xp->split = 1;	/* waitlast() */
