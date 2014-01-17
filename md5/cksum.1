@@ -1,4 +1,4 @@
-.\"	$OpenBSD: cksum.1,v 1.24 2013/04/15 15:54:17 millert Exp $
+.\"	$OpenBSD: cksum.1,v 1.29 2014/01/15 16:07:27 jmc Exp $
 .\"
 .\" Copyright (c) 1991, 1993
 .\"	The Regents of the University of California.  All rights reserved.
@@ -32,7 +32,7 @@
 .\"
 .\"	@(#)cksum.1	8.2 (Berkeley) 4/28/95
 .\"
-.Dd $Mdocdate: April 15 2013 $
+.Dd $Mdocdate: January 15 2014 $
 .Dt CKSUM 1
 .Os
 .Sh NAME
@@ -42,17 +42,19 @@
 .Sh SYNOPSIS
 .Nm cksum
 .Bk -words
-.Op Fl bpqrtx
+.Op Fl bcpqrtx
 .Op Fl a Ar algorithms
-.Op Fl c Op Ar checklist ...
+.Op Fl C Ar checklist
+.Op Fl h Ar hashfile
 .Op Fl o Ar 1 | 2
 .Op Fl s Ar string
 .Op Ar
 .Ek
 .Nm sum
-.Op Fl bpqrtx
+.Op Fl bcpqrtx
 .Op Fl a Ar algorithms
-.Op Fl c Op Ar checklist ...
+.Op Fl C Ar checklist
+.Op Fl h Ar hashfile
 .Op Fl o Ar 1 | 2
 .Op Fl s Ar string
 .Op Ar
@@ -150,10 +152,22 @@ This option is ignored for the
 and
 .Ar sysvsum
 algorithms, which do not use hexadecimal output.
-.It Fl c Op Ar checklist ...
-Compares all checksums contained in the file
+.It Fl C Ar checklist
+Compare the checksum of each
+.Ar file
+against the checksums in the
+.Ar checklist .
+Any specified
+.Ar file
+that is not listed in the
 .Ar checklist
-with newly computed checksums for the corresponding files.
+is ignored.
+.It Fl c
+If this option is specified, the
+.Ar file
+options become checklists.
+Each checklist should contain hash results in the normal format,
+which will be verified against the specified paths.
 Output consists of the digest used, the file name,
 and an OK or FAILED for the result of the comparison.
 This will validate any of the supported checksums.
@@ -163,6 +177,10 @@ The
 option may not be used in conjunction with more than a single
 .Fl a
 option.
+.It Fl h Ar hashfile
+Place the checksum into
+.Ar hashfile
+instead of stdout.
 .It Fl o Ar 1 | 2
 Use historic algorithms instead of the (superior) default one
 (see below).
@@ -269,11 +287,10 @@ The
 .Nm cksum
 and
 .Nm sum
-utilities exit 0 on success or \*(Gt0 if an error occurred.
+utilities exit 0 on success,
+and >0 if an error occurs.
 .Sh SEE ALSO
-.Xr md5 1 ,
-.Xr sha1 1 ,
-.Xr sha256 1
+.Xr md5 1
 .Pp
 The default calculation is identical to that given in pseudo-code
 in the following ACM article:

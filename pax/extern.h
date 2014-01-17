@@ -1,4 +1,4 @@
-/*	$OpenBSD: extern.h,v 1.36 2013/07/03 04:08:29 guenther Exp $	*/
+/*	$OpenBSD: extern.h,v 1.39 2014/01/09 03:12:25 guenther Exp $	*/
 /*	$NetBSD: extern.h,v 1.5 1996/03/26 23:54:16 mrg Exp $	*/
 
 /*-
@@ -133,7 +133,6 @@ int bcpio_wr(ARCHD *);
 /*
  * file_subs.c
  */
-extern char *gnu_name_string, *gnu_link_string;
 int file_creat(ARCHD *);
 void file_close(ARCHD *, int);
 int lnk_creat(ARCHD *);
@@ -236,7 +235,6 @@ extern int rmleadslash;
 extern int exit_val;
 extern int docrc;
 extern char *dirptr;
-extern char *ltmfrmt;
 extern char *argv0;
 extern FILE *listf;
 extern char *tempfile;
@@ -281,7 +279,7 @@ u_int st_hash(char *, int, int);
 /*
  * tar.c
  */
-extern char *gnu_hack_string;
+extern char *gnu_name_string, *gnu_link_string;
 int tar_endwr(void);
 off_t tar_endrd(void);
 int tar_trail(ARCHD *, char *, int, int *);
@@ -299,7 +297,10 @@ int ustar_wr(ARCHD *);
  * tty_subs.c
  */
 int tty_init(void);
-void tty_prnt(const char *, ...);
+void tty_prnt(const char *, ...)
+    __attribute__((nonnull(1), format(printf, 1, 2)));
 int tty_read(char *, int);
-void paxwarn(int, const char *, ...);
-void syswarn(int, int, const char *, ...);
+void paxwarn(int, const char *, ...)
+    __attribute__((nonnull(2), format(printf, 2, 3)));
+void syswarn(int, int, const char *, ...)
+    __attribute__((nonnull(3), format(printf, 3, 4)));

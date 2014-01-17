@@ -1,4 +1,4 @@
-/*	$OpenBSD: ar_io.c,v 1.40 2012/12/04 02:24:45 deraadt Exp $	*/
+/*	$OpenBSD: ar_io.c,v 1.44 2014/01/11 05:36:26 deraadt Exp $	*/
 /*	$NetBSD: ar_io.c,v 1.5 1996/03/26 23:54:13 mrg Exp $	*/
 
 /*-
@@ -379,27 +379,21 @@ ar_close(void)
 	 * could have written anything yet.
 	 */
 	if (frmt == NULL) {
-#	ifdef LONG_OFF_T
-		(void)fprintf(listf, "%s: unknown format, %lu bytes skipped.\n",
-#	else
-		(void)fprintf(listf, "%s: unknown format, %qu bytes skipped.\n",
-#	endif
+		(void)fprintf(listf, "%s: unknown format, %llu bytes skipped.\n",
 		    argv0, rdcnt);
 		(void)fflush(listf);
 		flcnt = 0;
 		return;
 	}
 
-	if (strcmp(NM_CPIO, argv0) == 0)
-		(void)fprintf(listf, "%qu blocks\n", (rdcnt ? rdcnt : wrcnt) / 5120);
-	else if (strcmp(NM_TAR, argv0) != 0)
+	if (strcmp(NM_TAR, argv0) != 0)
 		(void)fprintf(listf,
-#	ifdef LONG_OFF_T
-		    "%s: %s vol %d, %lu files, %lu bytes read, %lu bytes written.\n",
-#	else
-		    "%s: %s vol %d, %lu files, %qu bytes read, %qu bytes written.\n",
-#	endif
+		    "%s: %s vol %d, %lu files, %llu bytes read, %llu bytes written.\n",
 		    argv0, frmt->name, arvol-1, flcnt, rdcnt, wrcnt);
+#ifndef NOCPIO
+	else if (strcmp(NM_CPIO, argv0) == 0)
+		(void)fprintf(listf, "%llu blocks\n", (rdcnt ? rdcnt : wrcnt) / 5120);
+#endif /* !NOCPIO */
 	(void)fflush(listf);
 	flcnt = 0;
 }
@@ -667,7 +661,7 @@ ar_write(char *buf, int bsz)
 	/*
 	 * Better tell the user the bad news...
 	 * if this is a block aligned archive format, we may have a bad archive
-	 * if the format wants the header to start at a BLKMULT boundary.. While
+	 * if the format wants the header to start at a BLKMULT boundary. While
 	 * we can deal with the mis-aligned data, it violates spec and other
 	 * archive readers will likely fail. if the format is not block
 	 * aligned, the user may be lucky (and the archive is ok).
@@ -1243,7 +1237,7 @@ ar_next(void)
  * to keep the fd the same in the calling function (parent).
  */
 void
-ar_start_gzip(int fd, const char *gzip_program, int wr)
+ar_start_gzip(int fd, const char *path, int wr)
 {
 	int fds[2];
 	const char *gzip_flags;
@@ -1274,8 +1268,8 @@ ar_start_gzip(int fd, const char *gzip_program, int wr)
 		}
 		close(fds[0]);
 		close(fds[1]);
-		if (execlp(gzip_program, gzip_program, gzip_flags, (char *)NULL) < 0)
-			err(1, "could not exec %s", gzip_program);
+		if (execlp(path, path, gzip_flags, (char *)NULL) < 0)
+			err(1, "could not exec %s", path);
 		/* NOTREACHED */
 	}
 }

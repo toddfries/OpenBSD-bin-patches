@@ -1,4 +1,4 @@
-/*	$OpenBSD: date.c,v 1.39 2013/10/20 03:07:35 guenther Exp $	*/
+/*	$OpenBSD: date.c,v 1.42 2014/01/05 05:27:44 schwarze Exp $	*/
 /*	$NetBSD: date.c,v 1.11 1995/09/07 06:21:05 jtc Exp $	*/
 
 /*
@@ -49,7 +49,7 @@
 extern	char *__progname;
 
 time_t tval;
-int retval, jflag;
+int jflag;
 int slidetime;
 
 static void setthetime(char *);
@@ -68,7 +68,7 @@ main(int argc, char *argv[])
 	tz.tz_dsttime = tz.tz_minuteswest = 0;
 	rflag = 0;
 	while ((ch = getopt(argc, argv, "ad:jr:ut:z:")) != -1)
-		switch((char)ch) {
+		switch(ch) {
 		case 'd':		/* daylight saving time */
 			tz.tz_dsttime = atoi(optarg) ? 1 : 0;
 			break;
@@ -88,7 +88,7 @@ main(int argc, char *argv[])
 			break;
 		case 't':		/* minutes west of GMT */
 					/* error check; don't allow "PST" */
-			if (isdigit(*optarg)) {
+			if (isdigit((unsigned char)*optarg)) {
 				tz.tz_minuteswest = atoi(optarg);
 				break;
 			}
@@ -141,7 +141,7 @@ main(int argc, char *argv[])
 
 	(void)strftime(buf, sizeof(buf), format, localtime(&tval));
 	(void)printf("%s\n", buf);
-	exit(retval);
+	exit(0);
 }
 
 #define	ATOI2(ar)	((ar) += 2, ((ar)[-2] - '0') * 10 + ((ar)[-1] - '0'))
@@ -154,7 +154,7 @@ setthetime(char *p)
 	int yearset = 0;
 
 	for (t = p, dot = NULL; *t; ++t) {
-		if (isdigit(*t))
+		if (isdigit((unsigned char)*t))
 			continue;
 		if (*t == '.' && dot == NULL) {
 			dot = t;
