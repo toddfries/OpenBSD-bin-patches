@@ -1,4 +1,4 @@
-/*	$OpenBSD: args.c,v 1.22 2014/02/12 01:18:36 bluhm Exp $	*/
+/*	$OpenBSD: args.c,v 1.24 2014/03/27 15:32:13 tedu Exp $	*/
 /*	$NetBSD: args.c,v 1.7 1996/03/01 01:18:58 jtc Exp $	*/
 
 /*-
@@ -275,9 +275,6 @@ static const struct conv {
 	{ "ebcdic",	C_EBCDIC,	C_ASCII,	a2e_POSIX },
 	{ "ibm",	C_EBCDIC,	C_ASCII,	a2ibm_POSIX },
 	{ "lcase",	C_LCASE,	C_UCASE,	NULL },
-	{ "oldascii",	C_ASCII,	C_EBCDIC,	e2a_32V },
-	{ "oldebcdic",	C_EBCDIC,	C_ASCII,	a2e_32V },
-	{ "oldibm",	C_EBCDIC,	C_ASCII,	a2ibm_32V },
 	{ "osync",	C_OSYNC,	C_BS,		NULL },
 	{ "swab",	C_SWAB,		0,		NULL },
 	{ "sync",	C_SYNC,		0,		NULL },
@@ -312,13 +309,12 @@ f_conv(char *arg)
 
 /*
  * Convert an expression of the following forms to a size_t
- * 	1) A positive decimal number.
- *	2) A positive decimal number followed by a b (mult by 512).
- *	3) A positive decimal number followed by a k (mult by 1024).
- *	4) A positive decimal number followed by a m (mult by 1048576).
- *	5) A positive decimal number followed by a w (mult by sizeof int)
- *	6) Two or more positive decimal numbers (with/without k,b or w).
- *	   separated by x (also * for backwards compatibility), specifying
+ * 	1) A positive decimal number, optionally followed by
+ *		b - multiply by 512.
+ *		k, m or g - multiply by 1024 each.
+ *		w - multiply by sizeof int
+ *	2) Two or more of the above, separated by x
+ *	   (or * for backwards compatibility), specifying
  *	   the product of the indicated values.
  */
 static size_t
@@ -341,18 +337,24 @@ get_bsz(char *val)
 			goto erange;
 		++expr;
 		break;
-	case 'k':
-	case 'K':
+	case 'g':
+	case 'G':
 		t = num;
 		num *= 1024;
 		if (t > num)
 			goto erange;
-		++expr;
-		break;
+		/* fallthrough */
 	case 'm':
 	case 'M':
 		t = num;
-		num *= 1048576;
+		num *= 1024;
+		if (t > num)
+			goto erange;
+		/* fallthrough */
+	case 'k':
+	case 'K':
+		t = num;
+		num *= 1024;
 		if (t > num)
 			goto erange;
 		++expr;
@@ -374,23 +376,24 @@ get_bsz(char *val)
 			t = num;
 			num *= get_bsz(expr + 1);
 			if (t > num)
-erange:				errx(1, "%s: %s", oper, strerror(ERANGE));
+				goto erange;
 			break;
 		default:
 			errx(1, "%s: illegal numeric value", oper);
 	}
 	return (num);
+erange:
+	errx(1, "%s: %s", oper, strerror(ERANGE));
 }
 
 /*
  * Convert an expression of the following forms to an off_t
- * 	1) A positive decimal number.
- *	2) A positive decimal number followed by a b (mult by 512).
- *	3) A positive decimal number followed by a k (mult by 1024).
- *	4) A positive decimal number followed by a m (mult by 1048576).
- *	5) A positive decimal number followed by a w (mult by sizeof int)
- *	6) Two or more positive decimal numbers (with/without k,b or w).
- *	   separated by x (also * for backwards compatibility), specifying
+ * 	1) A positive decimal number, optionally followed by
+ *		b - multiply by 512.
+ *		k, m or g - multiply by 1024 each.
+ *		w - multiply by sizeof int
+ *	2) Two or more of the above, separated by x
+ *	   (or * for backwards compatibility), specifying
  *	   the product of the indicated values.
  */
 static off_t
@@ -413,18 +416,24 @@ get_off(char *val)
 			goto erange;
 		++expr;
 		break;
-	case 'k':
-	case 'K':
+	case 'g':
+	case 'G':
 		t = num;
 		num *= 1024;
 		if (t > num)
 			goto erange;
-		++expr;
-		break;
+		/* fallthrough */
 	case 'm':
 	case 'M':
 		t = num;
-		num *= 1048576;
+		num *= 1024;
+		if (t > num)
+			goto erange;
+		/* fallthrough */
+	case 'k':
+	case 'K':
+		t = num;
+		num *= 1024;
 		if (t > num)
 			goto erange;
 		++expr;
@@ -446,10 +455,12 @@ get_off(char *val)
 			t = num;
 			num *= get_off(expr + 1);
 			if (t > num)
-erange:				errx(1, "%s: %s", oper, strerror(ERANGE));
+				goto erange;
 			break;
 		default:
 			errx(1, "%s: illegal numeric value", oper);
 	}
 	return (num);
+erange:
+	errx(1, "%s: %s", oper, strerror(ERANGE));
 }
