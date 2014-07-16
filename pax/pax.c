@@ -1,4 +1,4 @@
-/*	$OpenBSD: pax.c,v 1.35 2014/01/09 03:12:25 guenther Exp $	*/
+/*	$OpenBSD: pax.c,v 1.37 2014/05/24 03:49:49 guenther Exp $	*/
 /*	$NetBSD: pax.c,v 1.5 1996/03/26 23:54:20 mrg Exp $	*/
 
 /*-
@@ -92,6 +92,7 @@ char	*dirptr;		/* destination dir in a copy */
 char	*argv0;			/* root of argv[0] */
 sigset_t s_mask;		/* signal mask for cleanup critical sect */
 FILE	*listf = stderr;	/* file pointer to print file list to */
+int	listfd = STDERR_FILENO;	/* fd matching listf, for sighandler output */
 char	*tempfile;		/* tempfile to use for mkstemp(3) */
 char	*tempbase;		/* basename of tempfile to use for mkstemp(3) */
 
@@ -297,25 +298,42 @@ sig_cleanup(int which_sig)
 
 	/*
 	 * restore modes and times for any dirs we may have created
-	 * or any dirs we may have read. Set vflag and vfpart so the user
-	 * will clearly see the message on a line by itself.
+	 * or any dirs we may have read.
 	 */
-	vflag = vfpart = 1;
 
 	/* paxwarn() uses stdio; fake it as well as we can */
 	if (which_sig == SIGXCPU)
-		strlcpy(errbuf, "CPU time limit reached, cleaning up.\n",
+		strlcpy(errbuf, "\nCPU time limit reached, cleaning up.\n",
 		    sizeof errbuf);
 	else
-		strlcpy(errbuf, "Signal caught, cleaning up.\n",
+		strlcpy(errbuf, "\nSignal caught, cleaning up.\n",
 		    sizeof errbuf);
 	(void) write(STDERR_FILENO, errbuf, strlen(errbuf));
 
-	ar_close();			/* XXX signal race */
-	proc_dir();			/* XXX signal race */
+	ar_close(1);
+	proc_dir(1);
 	if (tflag)
-		atdir_end();		/* XXX signal race */
+		atdir_end();
 	_exit(1);
+}
+
+/*
+ * setup_sig()
+ *	set a signal to be caught, but only if it isn't being ignored already
+ */
+
+static int
+setup_sig(int sig, const struct sigaction *n_hand)
+{
+	struct sigaction o_hand;
+
+	if (sigaction(sig, NULL, &o_hand) < 0)
+		return (-1);
+
+	if (o_hand.sa_handler == SIG_IGN)
+		return (0);
+
+	return (sigaction(sig, n_hand, NULL));
 }
 
 /*
@@ -329,7 +347,6 @@ gen_init(void)
 {
 	struct rlimit reslimit;
 	struct sigaction n_hand;
-	struct sigaction o_hand;
 
 	/*
 	 * Really needed to handle large archives. We can run out of memory for
@@ -378,39 +395,25 @@ gen_init(void)
 		paxwarn(1, "Unable to set up signal mask");
 		return(-1);
 	}
+
+	/* snag the fd to be used from the signal handler */
+	listfd = fileno(listf);
+
 	memset(&n_hand, 0, sizeof n_hand);
 	n_hand.sa_mask = s_mask;
 	n_hand.sa_flags = 0;
 	n_hand.sa_handler = sig_cleanup;
 
-	if ((sigaction(SIGHUP, &n_hand, &o_hand) < 0) ||
-	    (o_hand.sa_handler == SIG_IGN) &&
-	    (sigaction(SIGHUP, &o_hand, &o_hand) < 0))
-		goto out;
-
-	if ((sigaction(SIGTERM, &n_hand, &o_hand) < 0) ||
-	    (o_hand.sa_handler == SIG_IGN) &&
-	    (sigaction(SIGTERM, &o_hand, &o_hand) < 0))
-		goto out;
-
-	if ((sigaction(SIGINT, &n_hand, &o_hand) < 0) ||
-	    (o_hand.sa_handler == SIG_IGN) &&
-	    (sigaction(SIGINT, &o_hand, &o_hand) < 0))
-		goto out;
-
-	if ((sigaction(SIGQUIT, &n_hand, &o_hand) < 0) ||
-	    (o_hand.sa_handler == SIG_IGN) &&
-	    (sigaction(SIGQUIT, &o_hand, &o_hand) < 0))
-		goto out;
-
-	if ((sigaction(SIGXCPU, &n_hand, &o_hand) < 0) ||
-	    (o_hand.sa_handler == SIG_IGN) &&
-	    (sigaction(SIGXCPU, &o_hand, &o_hand) < 0))
+	if (setup_sig(SIGHUP,  &n_hand) ||
+	    setup_sig(SIGTERM, &n_hand) ||
+	    setup_sig(SIGINT,  &n_hand) ||
+	    setup_sig(SIGQUIT, &n_hand) ||
+	    setup_sig(SIGXCPU, &n_hand))
 		goto out;
 
 	n_hand.sa_handler = SIG_IGN;
-	if ((sigaction(SIGPIPE, &n_hand, &o_hand) < 0) ||
-	    (sigaction(SIGXFSZ, &n_hand, &o_hand) < 0))
+	if ((sigaction(SIGPIPE, &n_hand, NULL) < 0) ||
+	    (sigaction(SIGXFSZ, &n_hand, NULL) < 0))
 		goto out;
 	return(0);
 

@@ -1,4 +1,4 @@
-.\"	$OpenBSD: stty.1,v 1.39 2013/08/14 08:39:33 jmc Exp $
+.\"	$OpenBSD: stty.1,v 1.44 2014/05/29 12:59:13 jmc Exp $
 .\"	$NetBSD: stty.1,v 1.10 1995/09/07 06:57:14 jtc Exp $
 .\"
 .\" Copyright (c) 1990, 1993, 1994
@@ -33,7 +33,7 @@
 .\"
 .\"     @(#)stty.1	8.5 (Berkeley) 6/1/94
 .\"
-.Dd $Mdocdate: August 14 2013 $
+.Dd $Mdocdate: May 29 2014 $
 .Dt STTY 1
 .Os
 .Sh NAME
@@ -41,7 +41,7 @@
 .Nd set the options for a terminal device interface
 .Sh SYNOPSIS
 .Nm stty
-.Op Fl a | Fl e | Fl g
+.Op Fl a | e | g
 .Op Fl f Ar file
 .Op Ar operands
 .Sh DESCRIPTION
@@ -60,9 +60,7 @@ exclusive on some terminal types.
 The options are as follows:
 .Bl -tag -width Ds
 .It Fl a
-Display all the current settings for the terminal to standard output
-as per
-.St -p1003.2 .
+Display all the current settings for the terminal to standard output.
 .It Fl e
 Display all the current settings for the terminal to standard output
 in the traditional
@@ -86,8 +84,9 @@ block on the open.
 Display all the current settings for the terminal to standard output
 in a form that may be used as an argument to a subsequent invocation of
 .Nm
-to restore the current terminal state as per
-.St -p1003.2 .
+to restore the current terminal state.
+The output does not contain any characters that require quoting,
+to avoid word expansion by the shell.
 .El
 .Pp
 The following arguments are available to set the terminal
@@ -252,7 +251,7 @@ on output.
 .It Cm ocrnl Pq Fl ocrnl
 Translate (do not translate) carriage return to newline on output.
 .It Cm onocr Pq Fl onocr
-Carriage return is output (is not output) at column 0.
+Carriage return is not output (is output) at column 0.
 .It Cm onlret Pq Fl onlret
 Newline performs (does not perform) carriage return on output.
 .It Cm olcuc Pq Fl olcuc
@@ -386,7 +385,7 @@ and
 .Cm olcuc .
 .El
 .Ss Control characters
-.Bl -tag -width Fl
+.Bl -tag -width Fl -compact
 .It Ar control-character Ar string
 Set
 .Ar control-character
@@ -401,8 +400,8 @@ two character sequence
 or the string
 .Dq undef
 the control character
-is disabled (i.e., set to
-.Pf { Dv _POSIX_VDISABLE Ns } ) .
+is disabled (i.e. set to
+.Brq Dv _POSIX_VDISABLE ) .
 .Pp
 Recognized control-characters:
 .Bl -column "character" "Subscript" "Description"
@@ -424,10 +423,15 @@ Recognized control-characters:
 .It reprint Ta Dv VREPRINT Ta "REPRINT character"
 .It status Ta Dv VSTATUS Ta "STATUS character"
 .El
+.Pp
 .It Cm min Ar number
 .It Cm time Ar number
-Set the value of min or time to
-number.
+Set the value of
+.Cm min
+or
+.Cm time
+to
+.Ar number .
 .Dv MIN
 and
 .Dv TIME
@@ -444,8 +448,12 @@ produced by the
 .Fl g
 option.
 .It Cm evenp No or Cm parity
-Enable parenb and cs7; disable
-parodd.
+Enable
+.Cm parenb
+and
+.Cm cs7 ;
+disable
+.Cm parodd .
 .It Cm oddp
 Enable
 .Cm parenb ,
@@ -652,34 +660,83 @@ utility is compliant with the
 specification.
 .Pp
 The flags
-.Op Fl ef
-and the operands
-.Cm speed ,
-.Cm crtscts ,
-.Cm iuclc ,
-.Cm imaxlabel ,
-.Cm onlcr ,
-.Cm olcuc ,
-.Cm oxtabs ,
-.Cm onoeot ,
-.Cm echoke ,
+.Op Fl ef ,
+the operands
 .Cm altwerase ,
-.Cm mdmbuf ,
-.Cm flusho ,
-.Cm pendin ,
-.Cm xcase ,
-.Cm tty ,
-.Cm crt ,
-.Cm kerninfo ,
-.Cm columns ,
 .Cm cols ,
-.Cm rows ,
+.Cm columns ,
+.Cm crt ,
+.Cm crtscts ,
 .Cm dec ,
+.Cm echoke ,
 .Cm extproc ,
-.Cm raw ,
+.Cm flusho ,
+.Cm imaxbel ,
+.Cm kerninfo ,
+.Cm mdmbuf ,
+.Cm onlcr ,
+.Cm onoeot ,
+.Cm ostart ,
+.Cm ostop ,
+.Cm oxtabs ,
+.Cm pendin ,
+.Cm rows ,
 .Cm size ,
-the compatibility modes and the control operations
-are extensions to that specification.
+.Cm speed ,
+and
+.Cm tty ,
+and the control charcters
+eol2,
+dsusp,
+lnext,
+reprint,
+status,
+and
+werase
+are all extensions to that specification.
+.Pp
+The operands
+.Cm iuclc ,
+.Cm olcuc ,
+and
+.Cm xcase
+are marked by
+.St -p1003.1-2008
+as legacy items;
+the operands listed in
+.Sx Compatibility modes
+can also be considered legacy.
+.Pp
+The operands
+.Cm bs0-1 ,
+.Cm cr0-3 ,
+.Cm ff0-1 ,
+.Cm nl0-1 ,
+.Cm ocrnl ,
+.Cm ofdel ,
+.Cm ofill ,
+.Cm onlret ,
+.Cm onocr ,
+.Cm raw ,
+.Cm tab0-3 ,
+.Cm tabs ,
+and
+.Cm vt0-1
+are marked by
+.St -p1003.1-2008
+as being an X/Open System Interfaces option.
+Of those, only
+.Cm ocrnl ,
+.Cm onlret ,
+.Cm onocr ,
+.Cm raw ,
+and
+.Cm tabs
+are supported by this implementation of
+.Nm ,
+and behaviour for
+.Cm tabs
+differs.
 .Sh HISTORY
 A
 .Nm
